@@ -4,38 +4,35 @@ import numpy as np
 import requests
 import time
 import xlrd
+import os
 
 # requests失效后重连
 requests.adapters.DEFAULT_RETRIES = 5 # 增加重连次数
 s = requests.session()
 s.keep_alive = False # 关闭多余连接
 
-
-file = 'C:/Users/诗和远方/Desktop/1.xlsx'
-
+# 为了得到市场上上市股票的代码
+file = 'TongHuaShun.xlsx'
 def read_excel():
-
 	wb = xlrd.open_workbook(filename=file)#打开文件
 	print(wb.sheet_names())#获取所有表格名字
 	sheet1 = wb.sheet_by_index(0)#通过索引获取表格
-
 	# rows = sheet1.row_values(0)#获取行内容
 	cols = sheet1.col_values(0)#获取列内容
 	# print(rows)
 	return cols[1:]
-
-
 all_codes = read_excel()
 all_codes = [code[2:] for code in all_codes]
 
 # flag设置为执行的模式
-# 1为get_k_history，2为get_k_realtime，3为get_history_bill，4为get_history_bill_day
-flag = 3
+# 1为get_k_history，2为get_k_realtime，3为get_history_bill，4为get_history_bill_realtime
+flag = 1
 
 # 股票池
 # stock_codes = ['300750']
 stock_codes = all_codes
 
+# TODO:此方法存在问题，有查看到将某些深市股票扔以0.开头，反之亦然，从而导致爬取不到该股票信息
 def gen_secid(rawcode: str) -> str:
     '''
     生成东方财富专用的secid
@@ -60,7 +57,6 @@ def gen_secid(rawcode: str) -> str:
         return f'0.{rawcode}'
     # 深市股票
     return f'1.{rawcode}'
-
  
 def get_k_history(code: str, beg: str = '20200101', end: str = '20200201', klt: int = 101, fqt: int = 1) -> pd.DataFrame:
     '''
@@ -141,13 +137,11 @@ def get_k_history(code: str, beg: str = '20200101', end: str = '20200201', klt: 
         return pd.DataFrame(columns=columns)
 
     klines = data['klines']
-
     rows = []
     for _kline in klines:
 
         kline = _kline.split(',')
         rows.append(kline)
-
     df = pd.DataFrame(rows, columns=columns)
 
     return df
@@ -217,13 +211,11 @@ def get_k_realtime(code: str) -> pd.DataFrame:
         return pd.DataFrame(columns=columns)
 
     trends = data['trends']
-
     rows = []
     for _trend in trends:
 
         trend = _trend.split(',')
         rows.append(trend)
-
     df = pd.DataFrame(rows, columns=columns)
 
     return df
@@ -262,7 +254,6 @@ def get_history_bill(stock_code: str) -> pd.DataFrame:
         'f61': '超大单流入净占比',
         'f62': '收盘价',
         'f63': '涨跌幅'
-
     }
     fields = list(EastmoneyBills.keys())
     columns = list(EastmoneyBills.values())
@@ -273,8 +264,7 @@ def get_history_bill(stock_code: str) -> pd.DataFrame:
         ('klt', '101'),
         ('secid', secid),
         ('fields1', 'f1,f2,f3,f7'),
-        ('fields2', fields2),
-
+        ('fields2', fields2)
     )
 
     base_url = 'http://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get'
@@ -285,7 +275,6 @@ def get_history_bill(stock_code: str) -> pd.DataFrame:
     if json_response is None:
         return
     data = json_response['data']
-    
     if data != None:
         klines = data['klines']
         rows = []
@@ -293,12 +282,9 @@ def get_history_bill(stock_code: str) -> pd.DataFrame:
             kline = _kline.split(',')
             rows.append(kline)
         df = pd.DataFrame(rows, columns=columns)
-
         return df
     else:
         return None
-
-
 
 def get_history_bill_realtime(stock_code: str) -> pd.DataFrame:
     '''
@@ -327,7 +313,6 @@ def get_history_bill_realtime(stock_code: str) -> pd.DataFrame:
         'f54': '中单净流入',
         'f55': '大单净流入',
         'f56': '超大单净流入'
-
     }
     fields = list(EastmoneyBills.keys())
     columns = list(EastmoneyBills.values())
@@ -339,7 +324,6 @@ def get_history_bill_realtime(stock_code: str) -> pd.DataFrame:
         ('secid', secid),
         ('fields1', 'f1,f2,f3,f7'),
         ('fields2', fields2),
-
     )
 
     json_response = s.get('http://push2.eastmoney.com/api/qt/stock/fflow/kline/get',
@@ -355,7 +339,6 @@ def get_history_bill_realtime(stock_code: str) -> pd.DataFrame:
     df = pd.DataFrame(rows, columns=columns)
 
     return df
-
 
 
 if __name__ == "__main__":
@@ -393,7 +376,10 @@ if __name__ == "__main__":
     #                 break
     #             time.sleep(60)
 
+    
+    # # 爬取得股票按照前一天主力净流入比例排序
     # list_sort = []
+    # # 未爬取到的股票代码
     # none_list = []
     # for i, stock_code in enumerate(stock_codes):
     #     print(str(i) + "-" + stock_code)
@@ -413,12 +399,21 @@ if __name__ == "__main__":
     # np.save('list_sort_ind.npy', list_sort_ind)
     # np.save('list_none.npy', none_list)
 
-    a = np.load('list_none.npy')
-    b = np.load('list_sort_ind.npy')
-    print(len(a))
-    print(len(b))
+    # a = np.load('list_none.npy')
+    # b = np.load('list_sort_ind.npy')
+    # print(len(a)) # 482
+    # print(len(b)) # 3818
 
-        
+    save_dir = 'k_history'
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
 
+    for i, stock_code in enumerate(stock_codes):
+        print(str(i) + "-" + stock_code)
+        df = get_k_history(stock_code, beg='20150101', end='20200501')
+        if df is not None:
+            df.to_csv(f'{save_dir}/k_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
+            print(f'股票代码：{stock_code} 的日间k线数据已保存到代码目录下的 {save_dir}/k_history_{stock_code}.csv 文件中')
+        time.sleep(1)
 
         
