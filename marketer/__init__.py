@@ -1,7 +1,7 @@
 '''
 Author: peihan
 Date: 2021-04-26 12:19:40
-LastEditTime: 2021-04-26 17:53:37
+LastEditTime: 2021-04-26 18:12:11
 LastEditors: Please set LastEditors
 Description: 接口类
 '''
@@ -15,7 +15,7 @@ def k_history(stock_codes=None, save_dir='k_history', beg='0', end='20500101'):
     '''
     @description: 得到目标股票池的历史k线数据
                 包括 [开盘 收盘 最高 最低 成交量 成交额 振幅 涨跌幅 涨跌额 换手率]
-    @param {stock_codes: 目标股票池，若用户未自定义，默认为市场所有股票}
+    @param {stock_codes: list 目标股票池，若用户未自定义，默认为市场所有股票}
     @return {None}
     '''
     if stock_codes is None:
