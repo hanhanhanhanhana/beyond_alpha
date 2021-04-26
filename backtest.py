@@ -9,7 +9,14 @@ import random
 
 '''
 stocks = {
-    '0001': {'name', '万科A'}
+    '2020-04-25': {
+                ('000002', '万科A'): [0.0, 0, 28.83, 28.09, 29.08, 28.92]
+                ('300059': '东方财富'): [0.0, 0, 28.35, 31.59, 32.04, 28.13]
+                }
+    '2020-04-26': {
+                ('000002', '万科A'): [0.0, 0, 28.00, 27.70, 28.20, 27.60]
+                ('300059', '东方财富'): [0.0, 0, 32.00, 31.02, 32.20, 30.85,...]
+    }
 }
 '''
 
@@ -55,6 +62,7 @@ def updateHoldingPriceofBuyingOneStock(buy_price: float, buy_shares: int, had_pr
     return (had_price * had_shares + buy_price * buy_shares) / (had_shares + buy_shares), had_shares + buy_shares
 
 def updateHoldingPriceofSellingOneStock(sell_price: float, sell_shares: int, had_price: float, had_shares: int) -> (float, int):
+    pass
 
 def countEarningsofOneStock(had_price: float, had_shares: int, closing_price: float) -> (float, float):
     '''
@@ -131,7 +139,7 @@ def backtest(stocks: dict, strategy) -> dict:
 
 def main():
     random.seed(42) # 测试阶段固定全局随机数。42是宇宙终极问题的答案
-    k_history = 'k_history' # 存放股票历史数据的目录
+    k_history = '/Users/liji/Downloads/k_history' # 存放股票历史数据的目录
     ksFiles = [os.path.join(k_history, l) for l in os.listdir(k_history) if os.path.getsize(os.path.join(k_history, l)) > 95] # 获取文件size>95B的文件列表
     stocks = {} # 存放股票
                 #一级key为date
