@@ -38,10 +38,11 @@ def test_strategy(sub_stocks: dict) -> (dict, dict):
     sell_stocks: key为股票id+股票名
                  value为卖出股数，卖出价（或卖出时间，容后再议论），et al
     '''
-    random.seed(int(time.time())) # 为了让每次选出股票不同，暂时如此
-    t_1 = sorted(sub_stocks.keys())[-1] # T-1日的股票，但愿T日不会被退市hhh
-    buy_stocks = {k: [100, -1] for k in random.sample(sub_stocks[t_1].keys(), 3)} # 随机选三只股票默认买入100股, 即A股当前最低交易股数
-    sell_stocks = {} # 暂不处理
+    #random.seed(int(time.time()))                              # 为了让每次选出股票不同，暂时如此
+    t_1 = sorted(sub_stocks.keys())[-1]                         # T-1日的股票，但愿T日不会被退市hhh
+    random_stocks = random.sample(sub_stocks[t_1].keys(), 6)    # 默认即是不放回抽样
+    buy_stocks = {k: [100, -1] for k in random_stocks[3:]}      # 随机选三只股票默认买入100股, 即A股当前最低交易股数
+    sell_stocks = {k: [100, -1] for k in random_stocks[3:]}     # 随机选三只股票默认卖出100股, 即A股当前最低交易股数
     return buy_stocks, sell_stocks
 
 def updateHoldingPriceofBuyingOneStock(buy_price: float, buy_shares: int, had_price: float, had_shares: int) -> (float, int):
@@ -62,7 +63,21 @@ def updateHoldingPriceofBuyingOneStock(buy_price: float, buy_shares: int, had_pr
     return (had_price * had_shares + buy_price * buy_shares) / (had_shares + buy_shares), had_shares + buy_shares
 
 def updateHoldingPriceofSellingOneStock(sell_price: float, sell_shares: int, had_price: float, had_shares: int) -> (float, int):
-    pass
+    '''
+    计算卖出后持仓成本价
+
+    Parameters
+    ----------
+    sell_price: 卖出价，应符合T日报价范围
+    sell_shares：买入股数（手数 * 每手股数） 应符合持仓即应小于had_shares
+    had_price：持有价
+    had_shares：持有股数
+
+    Return
+    ------
+    更新的持仓成本价, 持仓数
+    '''
+    return (0, 0) if had_shares - sell_shares <= 0 else (had_price, had_shares - sell_shares)
 
 def countEarningsofOneStock(had_price: float, had_shares: int, closing_price: float) -> (float, float):
     '''
@@ -98,18 +113,38 @@ def countProit(stocks: dict, sell_stocks: dict, buy_stocks: dict, date_t_1: str,
     ------
     更新完T日stocks股票持仓后返回该字典
     '''
-    for stock, [] in sell_stocks.items():
-        pass
-    for stock, [t_buy_shares, t_buy_price] in buy_stocks.items():
-        t_1_had_price, t_1_had_shares = stocks[date_t_1][stock][:2] # 获取T-1日持仓价和持仓股数
-        if stock not in stocks[date_t]:
-            continue
-        if t_buy_shares <= 0: t_buy_shares = 100
-        if t_buy_price <= 0: t_buy_price = float(stocks[date_t][stock][2]) # 当前设计索引2中的值，表示该股当日开盘价，暂不考虑封板买入的可能性，默认均可以开盘价买入
-        had_price, had_shares = updateHoldingPriceofBuyingOneStock(t_buy_price, t_buy_shares, t_1_had_price, t_1_had_shares) # 未考虑税费
-        stocks[date_t][stock][0] = had_price
-        stocks[date_t][stock][1] = had_shares
-        print(stock, had_price, had_shares)
+    if '600269' in buy_stocks:
+        print(buy_stocks, sell_stocks)
+    for stock, v in stocks[date_t_1].items():
+        t_1_had_price, t_1_had_shares = v[:2]                                           # 获取T-1日持仓价和持仓股数
+        if stock not in stocks[date_t]: continue                                        # 可能发生了股票退市或停牌
+        open_price, close_price, high_price, low_price = stocks[date_t][stock][2: 6]    # 获得T日四个价位
+        open_price, close_price, high_price, low_price = float(open_price), float(close_price), float(high_price), float(low_price)
+        try:                                                                                    # 处理卖出逻辑, test_strategy保证了不会同一天买入卖出一只股票
+            t_sell_shares, t_sell_price = sell_stocks[stock]
+            if (0 < t_sell_shares < t_1_had_shares) == False: t_sell_shares = t_1_had_shares    # 超出持仓时默认清仓
+            if (low_price <= t_sell_price <= high_price) == False: t_sell_price = open_price    # 当前设计索引2中的值，表示该股当日开盘价，暂不考虑跌停板卖出的可能性，默认均可以开盘价卖出
+            if '600269' == stock:
+                print(t_sell_price, t_sell_shares)
+            had_price, had_shares = updateHoldingPriceofSellingOneStock(t_sell_price, t_sell_shares, t_1_had_price, t_1_had_shares)
+            if '600269' == stock:
+                print(had_price, had_shares)
+            stocks[date_t][stock][0] = had_price
+            stocks[date_t][stock][1] = had_shares
+            t_1_had_price, t_1_had_shares = had_price, had_shares
+        except KeyError:
+            pass
+        try:                                                                                    # 处理买入逻辑
+            t_buy_shares, t_buy_price = buy_stocks[stock]
+            if t_buy_shares <= 0: t_buy_shares = 100                                            # 默认买入100股
+            if (low_price <= t_buy_price <= high_price) == False: t_buy_price = open_price      # 当前设计索引2中的值，表示该股当日开盘价，暂不考虑涨停板买入的可能性，默认均可以开盘价买入
+            had_price, had_shares = updateHoldingPriceofBuyingOneStock(t_buy_price, t_buy_shares, t_1_had_price, t_1_had_shares) # 未考虑税费
+            stocks[date_t][stock][0] = had_price
+            stocks[date_t][stock][1] = had_shares
+        except KeyError:                                                                        # 下面的逻辑是为了用该股票T-1日的价格更新T日没有买入卖出操作的股票的价格
+            stocks[date_t][stock][0] = t_1_had_price
+            stocks[date_t][stock][1] = t_1_had_shares
+    print(stocks[date_t]['600269'])
     return stocks
 
 def backtest(stocks: dict, strategy) -> dict:
@@ -131,9 +166,9 @@ def backtest(stocks: dict, strategy) -> dict:
     i = 1 # 第T日
     while i < len(dates):
         t_1, t = dates[i - 1], dates[i]
-        buy_stocks, sell_stocks = strategy({t_1: stocks[t_1]})  # 根据策略获得T日买入卖出
-                                                                            # 字典切片太慢了先用一个测试，后期向量化
-        stocks = countProit(stocks, sell_stocks, buy_stocks, t_1, t) # 根据T-1日策略计算更新T日收益
+        buy_stocks, sell_stocks = strategy({t_1: stocks[t_1]})          # 根据策略获得T日买入卖出
+                                                                        # 字典切片太慢了先用一个测试，后期向量化
+        stocks = countProit(stocks, sell_stocks, buy_stocks, t_1, t)    # 根据T-1日策略计算更新T日收益
         i += 1
     return stocks
 
@@ -144,9 +179,9 @@ def main():
     stocks = {} # 存放股票
                 #一级key为date
                 # 二级key为股票id + 股票名（害，暂时没支持，dbq）
-                # 为了方便后续改为numpy处理，value[0]固定为该股成本价，默认为0，不影响后续计算, value[1]固定为该股当日持仓股数
+                # 为了方便后续改为numpy处理，value[0]固定为该股成本价，默认为0，不影响后续计算, value[1]固定为该股当日持仓股数, value[2]为T日操作，1表示买入，2表示卖出，3表示有买有卖
                 # value[0]和value[1]要么同时为0，要么同时大于0，其它情况均为异常
-    for stock in random.sample(ksFiles, 10): # 测试阶段，先取10支股票试试水
+    for stock in random.sample(ksFiles, 100): # 测试阶段，先取100支股票试试水
         stock_code = stock[:-4].split('_')[-1] # 从文件名中获取股票id，每个元素类似k_history/k_history_688202.csv
         with open(stock, 'rt') as f:
             # 每列含义：datatime,open,close,high,low,volume,amount,zhenfu,zhangdiefu,zhangdiee,huanshoulv
@@ -155,14 +190,16 @@ def main():
             for line in f:
                 fd = line.strip().split(',')
                 try:
-                    stocks[fd[0]].update({stock_code: [0, 0] + fd[1:]}) # 记得加上股票名，要做有温度的赚钱机器
+                    stocks[fd[0]].update({stock_code: [0, 0, 0] + fd[1:]}) # 记得加上股票名，要做有温度的赚钱机器
                 except KeyError:
-                    stocks[fd[0]] = {stock_code: [0, 0] + fd[1:]}
+                    stocks[fd[0]] = {stock_code: [0, 0, 0] + fd[1:]}
     # 好了，以上都是废话，为了导入数据用的。下面才是模块的核心代码，回测。
     stocks = backtest(stocks, test_strategy)
     lastDate = sorted(stocks.keys())[-1]
-    for k, v in stocks[lastDate].items():
-        print(k, v)
+    for k, v in sorted(stocks.items()):
+        print(k, v['600269'])
+    print(lastDate)
+    print(stocks[lastDate]['600269'])
     # 画图
     #drawPig(stocks)
     return 0
