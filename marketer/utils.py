@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-04-26 12:35:42
-LastEditTime: 2021-04-26 17:52:48
+LastEditTime: 2021-04-27 14:55:51
 LastEditors: Please set LastEditors
 Description: 通用方法类
 '''
@@ -24,26 +24,31 @@ def read_excel():
     # print(rows)
     # print(cols)
     all_codes = cols[1:] # ['SH688639', 'SZ300153', 'SZ300061'...]
-    all_codes = [code[2:] for code in all_codes]
     return all_codes
 
 def gen_secid(rawcode):
     '''
     @description: 生成东方财富专用的secid
-    @param {rawcode: 6位股票代码}
+    @param {rawcode: 8位股票代码}
     @return {指定格式的字符串}
     '''
-    # 沪市指数
-    if rawcode[:3] == '000':
-        return f'1.{rawcode}'
-    # 深证指数
-    if rawcode[:3] == '399':
-        return f'0.{rawcode}'
-    # 沪市股票
-    if rawcode[0] != '6':
-        return f'0.{rawcode}'
-    # 深市股票
-    return f'1.{rawcode}'
+    # # 沪市指数
+    # if rawcode[:3] == '000':
+    #     return f'1.{rawcode}'
+    # # 深证指数
+    # if rawcode[:3] == '399':
+    #     return f'0.{rawcode}'
+    # # 深市股票
+    # if rawcode[0] != '6':
+    #     return f'0.{rawcode}'
+    # # 沪市股票
+    # return f'1.{rawcode}'
+    if rawcode[:2] == 'SZ':
+        return f'0.{rawcode[2:]}'
+    elif rawcode[:2] == 'SH':
+        return f'1.{rawcode[2:]}'
+    else:
+        return None
 
 def fix_secid(secid, code):
     '''
@@ -52,8 +57,7 @@ def fix_secid(secid, code):
     @return {*}
     '''
     if secid[0] == '0':
-        secid = f'1.{code}'
+        return f'1.{code[2:]}'
     else:
-        secid = f'0.{code}'
-    return secid
+        return f'0.{code[2:]}'
 

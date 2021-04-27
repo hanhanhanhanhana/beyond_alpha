@@ -1,7 +1,7 @@
 '''
 Author: peihan
 Date: 2021-04-26 12:34:54
-LastEditTime: 2021-04-26 17:53:17
+LastEditTime: 2021-04-27 16:18:59
 LastEditors: Please set LastEditors
 Description: 获取市场信息的内部接口类
 '''
@@ -9,11 +9,9 @@ import pandas as pd
 from urllib.parse import urlencode
 import requests
 from . import utils
-
-# requests失效后重连
-requests.adapters.DEFAULT_RETRIES = 5 # 增加重连次数
-s = requests.session()
-s.keep_alive = False # 关闭多余连接
+import socket
+ 
+socket.setdefaulttimeout(60)  # 设置socket层的超时时间为20秒
 
 # 同花顺网站Headers
 EastmoneyHeaders = {
@@ -28,20 +26,21 @@ def fetch_data(data_type, params, base_url, code, secid, columns):
     '''
     @description: 通用获取股票信息的方法
     @param {data_type: 东方财富自定义的key，包括klines，trends等
-            code: 6位股票代码
+            code: 8位股票代码
             secid: 东方财富专用的secid
             columns: 各指标的名称}
     @return {DataFrame}
     '''
     url = base_url+'?'+urlencode(params)
-    json_response = s.get(url, headers=EastmoneyHeaders).json()
+    response = requests.get(url, headers=EastmoneyHeaders)
+    json_response = response.json()
     data = json_response['data']
     if data is None:
         secid = utils.fix_secid(secid, code)
         params['secid'] = secid
         url = base_url+'?'+urlencode(params)
-        json_response: dict = s.get(
-            url, headers=EastmoneyHeaders).json()
+        response = requests.get(url, headers=EastmoneyHeaders)
+        json_response = response.json()
         data = json_response.get('data')
     if data is None:
         print('股票代码:', code, '可能有误')
@@ -52,12 +51,14 @@ def fetch_data(data_type, params, base_url, code, secid, columns):
         line = _line.split(',')
         rows.append(line)
     df = pd.DataFrame(rows, columns=columns)
+
+    response.close() # 关闭连接
     return df
 
 def get_k_history(code, beg, end, klt=101, fqt=1):
     '''
     @description: 获取k线数据，得到日间涨跌信息
-    @param {code: 6位股票代码
+    @param {code: 8位股票代码
             beg: str 开始日期 例如 '20200101'
             end: str 结束日期 例如 '20200201'
             klt: int k线间距 默认为 101 即日k
@@ -106,7 +107,7 @@ def get_k_history(code, beg, end, klt=101, fqt=1):
 def get_k_realtime(code):
     '''
     @description: 获取k线数据，得到实时日内涨跌信息
-    @param {code: 6位股票代码}
+    @param {code: 8位股票代码}
     @return {DateFrame}
     '''
     EastmoneyKlines = {
