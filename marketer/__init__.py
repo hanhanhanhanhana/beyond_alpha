@@ -1,33 +1,63 @@
 '''
 Author: peihan
 Date: 2021-04-26 12:19:40
-LastEditTime: 2021-04-27 15:26:33
+LastEditTime: 2021-05-06 21:15:42
 LastEditors: Please set LastEditors
 Description: 接口类
 '''
 import os
 import time
+import numpy as np
 from . import market
 from . import utils
 
 
-def k_history(stock_codes=None, save_dir='k_history', beg='0', end='20500101'):
+def k_history(stock_codes=None, save_csv=False, save_dir=None, beg=0, end=20500101):
     '''
     @description: 得到目标股票池的历史k线数据
                 包括 [开盘 收盘 最高 最低 成交量 成交额 振幅 涨跌幅 涨跌额 换手率]
     @param {stock_codes: list 目标股票池，若用户未自定义，默认为市场所有股票}
-    @return {None}
+    @return {dict_code_as_key: 股票代码作为key，value为一个二维list，第一维为日期的list，第二维为二维numpy array，形状为len(日期数)*数据指标数
+            dict_date_as_key: 日期作为key，value为一个二维list，第一维为股票的list，第二维为二维numpy array，形状为len(股票数)*数据指标数}
     '''
     if stock_codes is None:
         # 为了得到市场上上市股票的代码
         stock_codes = utils.read_excel()
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
+    dict_code_as_key = {}
+    dict_date_as_key = {}
+    k = 0
     for stock_code in stock_codes:
-        df = market.get_k_history(stock_code, beg, end)
-        df.to_csv(f'{save_dir}/k_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
-        print(f'股票代码：{stock_code} 的日间k线数据已保存到代码目录下的 {save_dir}/k_history_{stock_code}.csv 文件中')
+        print(k)
+        df, rows, columns = market.get_k_history(stock_code, beg, end)
+
+        if rows == []: # 股票代码有误
+            continue
+        dates = [int(row[0].replace('-','')) for row in rows] # 日期list，类型为int
+        rows_except_date = [row[1:] for row in rows] # 列表中去除掉日期
+        rows_except_date_to_numbers = np.array([np.fromstring(', '.join(row),   
+                                        dtype=float, sep=', ') for row in rows_except_date]) # 形成二维array，形状为len(日期)*数据指标数
+        dict_code_as_key[stock_code] = [dates, rows_except_date_to_numbers] # 二维list，第一维为日期的list，第二维为上面得到的二维array    
+        # 得到dict_date_as_key的部分代码
+        for i, date in enumerate(dates):
+            if date not in dict_date_as_key.keys():
+                dict_date_as_key[date] = [[stock_code], np.array([rows_except_date_to_numbers[i]])]
+            else:
+                dict_date_as_key[date][0].append(stock_code)
+                feat = dict_date_as_key[date][1]
+                dict_date_as_key[date][1] = np.insert(feat, feat.shape[0], rows_except_date_to_numbers[i], 0)
+
+        if save_csv is True:
+            df.to_csv(f'{save_dir}/k_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
+            print(f'股票代码：{stock_code} 的日间k线数据已保存到代码目录下的 {save_dir}/k_history_{stock_code}.csv 文件中')
         time.sleep(0.5)
+        k+=1
+    
+    np.save('dict_code_as_key', dict_code_as_key)
+    np.save('dict_date_as_key', dict_date_as_key)
+    
+    return dict_code_as_key, dict_date_as_key
+
+        
 
 def bill_history(stock_codes=None, save_dir='bill_history'):
     '''
@@ -64,12 +94,13 @@ def k_history_realtime(stock_codes=None, save_dir='k_history_realtime'):
     for _ in range(1000):
         for stock_code in stock_codes:
             df = market.get_k_realtime(stock_code)
-            df.to_csv(f'{save_dir}/k_history_realtime_{stock_code}.csv', encoding='utf-8-sig', index=None)
-            print(f'股票代码：{stock_code} 的实时k线数据已保存到代码目录下的 {save_dir}/k_history_realtime_{stock_code}.csv 文件中')
+            print(df)
+            # df.to_csv(f'{save_dir}/k_history_realtime_{stock_code}.csv', encoding='utf-8-sig', index=None)
+            # print(f'股票代码：{stock_code} 的实时k线数据已保存到代码目录下的 {save_dir}/k_history_realtime_{stock_code}.csv 文件中')
             if len(df) >= 240:
                 print('已收盘')
                 break
-            time.sleep(60)
+            time.sleep(30)
 
 def bill_history_realtime(stock_codes=None, save_dir='bill_history_realtime'):
     '''

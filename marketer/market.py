@@ -1,7 +1,7 @@
 '''
 Author: peihan
 Date: 2021-04-26 12:34:54
-LastEditTime: 2021-04-27 16:18:59
+LastEditTime: 2021-05-06 17:25:07
 LastEditors: Please set LastEditors
 Description: 获取市场信息的内部接口类
 '''
@@ -11,7 +11,7 @@ import requests
 from . import utils
 import socket
  
-socket.setdefaulttimeout(60)  # 设置socket层的超时时间为20秒
+socket.setdefaulttimeout(60)  # 设置socket层的超时时间为60秒
 
 # 同花顺网站Headers
 EastmoneyHeaders = {
@@ -44,22 +44,24 @@ def fetch_data(data_type, params, base_url, code, secid, columns):
         data = json_response.get('data')
     if data is None:
         print('股票代码:', code, '可能有误')
-        return pd.DataFrame(columns=columns)
+        return pd.DataFrame(columns=columns), [], columns
     lines = data[data_type]
     rows = []
     for _line in lines:
         line = _line.split(',')
         rows.append(line)
+
     df = pd.DataFrame(rows, columns=columns)
 
     response.close() # 关闭连接
-    return df
 
-def get_k_history(code, beg, end, klt=101, fqt=1):
+    return df, rows, columns
+
+def get_k_history(code: str, beg: int, end: int, klt=101, fqt=1):
     '''
     @description: 获取k线数据，得到日间涨跌信息
     @param {code: 8位股票代码
-            beg: str 开始日期 例如 '20200101'
+            beg: 开始日期 例如 20200101
             end: str 结束日期 例如 '20200201'
             klt: int k线间距 默认为 101 即日k
                 klt:1 1 分钟
