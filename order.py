@@ -8,7 +8,7 @@ FilePath: \code\beyond_alpha\order.py
 '''
 class Order(object):
     def __init__(self, id: int, type: str, code: str, shares: int, price: float, 
-                    done: bool, create_date: int, deal_date:int, dsc='no description'):
+                    done: bool, create_date: str, deal_date: str, dsc='no description'):
         '''
         @description: 生成订单对象
         @param {id: 订单id
@@ -22,42 +22,68 @@ class Order(object):
                 deal_date: 订单成交的时间}
         @return {dict}       
         '''     
-        self.__id = id
-        self.__type = type 
-        self.__code = code
-        self.__shares = shares
-        self.__price = price
+        self.__id = int(id)
+        self.__type = str(type)
+        self.__code = str(code)
+        self.__shares = int(shares)
+        self.__price = float(price)
         self.__done = done
-        self.__dsc = dsc
-        self.__create_date = create_date
-        self.__deal_date = deal_date
+        self.__dsc = str(dsc)
+        self.__create_date = str(create_date)
+        self.__deal_date = str(deal_date)
     
-    def get_id(self):
+    @property
+    def id(self):
         return self.__id
 
-    def get_type(self):
+    @property
+    def type(self):
         return self.__type
-
-    def get_code(self):
-        return self.__code
     
-    def get_shares(self):
+    @property
+    def code(self):
+        return self.__code
+
+    @property
+    def shares(self):
         return self.__shares
     
-    def get_price(self):
+    @property
+    def price(self):
         return self.__price
     
-    def is_done(self):
+    @property
+    def done(self):
         return self.__done
-
-    def get_dsc(self):
+    @done.setter
+    def done(self, value):
+        if not isinstance(value, bool):
+            raise ValueError("done must be bool")
+        self.__done = value
+    
+    @property
+    def dsc(self):
         return self.__dsc
-
-    def get_create_date(self):
+    @dsc.setter
+    def dsc(self, value):
+        if not isinstance(value, str):
+            raise ValueError("dsc must be str")
+        self.__dsc = value
+    
+    @property
+    def create_date(self):
         return self.__create_date
-
-    def get_deal_date(self):
+    
+    @property
+    def deal_date(self):
         return self.__deal_date
+    @deal_date.setter
+    def deal_date(self, value):
+        if not isinstance(value, str):
+            raise ValueError("deal_date must be str")
+        if len(value) != 14:
+            raise ValueError("deal_date需要包含年月日时分秒数据，时分秒均占2位")
+        self.__deal_date = value
     
     def create_order(self):
         return {
@@ -72,3 +98,17 @@ class Order(object):
             "deal_date": self.__deal_date
         }
 
+    # 打印当前订单
+    def err(self, msg):
+        print("订单失败原因:", msg)
+        print("----------订单详情如下----------")
+        print("id:    ", self.__id)
+        print("type:  ", self.__type)
+        print("code:  ", self.__code)
+        print("shares:", self.__shares)
+        print("price: ", self.__price)
+        print("done:  ", self.__done)
+        print("dsc:   ", self.__dsc)
+        print("create_date:", self.__create_date)
+        print("deal_date:  ", self.__deal_date)
+        print("--------------------------------")
