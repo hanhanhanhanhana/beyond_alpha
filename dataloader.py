@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-04-28 21:55:28
-LastEditTime: 2021-05-06 21:06:41
+LastEditTime: 2021-05-07 10:48:09
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \code\beyond_alpha\dataloader.py
@@ -55,6 +55,31 @@ class MarketLoader:
             dict_code_as_key, dict_date_as_key = mk.k_history(stock_codes=self.__custom_stocks, save_csv=self.__save_csv, save_dir=self.__save_dir, beg=self.__beg, end=self.__end)
         elif self.__constituent_index is not None and self.__custom_stocks is not None:
             raise Exception('constituent_index与custom_stocks不能被同时设置，请选其一进行设置!')
+
+        return dict_code_as_key, dict_date_as_key
+    
+    def load_bill_history(self):
+        # 处理save_csv与save_dir匹配问题
+        if self.__save_csv is False and self.__save_dir is not None:
+            raise Exception('save_dir勿须设置!')
+        elif self.__save_csv is True and self.__save_dir is None:
+            raise Exception('请设置save_dir!')
+        elif self.__save_csv is True and self.__save_dir is not None:
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+
+        # 用户未定义，默认为全市场股票
+        if self.__constituent_index is None and self.__costom_stocks is None:
+            dict_code_as_key, dict_date_as_key = mk.k_history(save_csv=self.__save_csv, save_dir=self.__save_dir, beg=self.__beg, end=self.__end)
+        # TODO: 实现成分股
+        elif constituent_index is not None:
+            constituent_index_stocks = []
+            dict_code_as_key, dict_date_as_key = mk.k_history(stock_codes=constituent_index_stocks, save_csv=self.__save_csv, save_dir=self.__save_dir, beg=self.__beg, end=self.__end)
+        # 用户自定义股票池
+        elif costom_stocks is not None:
+            dict_code_as_key, dict_date_as_key = mk.k_history(stock_codes=self.__costom_stocks, save_csv=self.__save_csv, save_dir=self.__save_dir, beg=self.__beg, end=self.__end)
+        elif self.__constituent_index is not None and self.__costom_stocks is not None:
+            raise Exception('constituent_index与costom_stocks不能被同时设置，请选其一进行设置!')
 
         return dict_code_as_key, dict_date_as_key
         

@@ -1,7 +1,7 @@
 '''
 Author: peihan
 Date: 2021-04-26 12:19:40
-LastEditTime: 2021-05-06 21:15:42
+LastEditTime: 2021-05-07 22:59:58
 LastEditors: Please set LastEditors
 Description: 接口类
 '''
@@ -11,14 +11,11 @@ import numpy as np
 from . import market
 from . import utils
 
-
-def k_history(stock_codes=None, save_csv=False, save_dir=None, beg=0, end=20500101):
+def history_helper(data_type='k', stock_codes=None, save_csv=False, save_dir=None, beg=0, end=20500101):
     '''
-    @description: 得到目标股票池的历史k线数据
-                包括 [开盘 收盘 最高 最低 成交量 成交额 振幅 涨跌幅 涨跌额 换手率]
-    @param {stock_codes: list 目标股票池，若用户未自定义，默认为市场所有股票}
-    @return {dict_code_as_key: 股票代码作为key，value为一个二维list，第一维为日期的list，第二维为二维numpy array，形状为len(日期数)*数据指标数
-            dict_date_as_key: 日期作为key，value为一个二维list，第一维为股票的list，第二维为二维numpy array，形状为len(股票数)*数据指标数}
+    @description: k_history与bill_history两个方法的helper函数
+    @param {*}
+    @return {*}
     '''
     if stock_codes is None:
         # 为了得到市场上上市股票的代码
@@ -28,8 +25,11 @@ def k_history(stock_codes=None, save_csv=False, save_dir=None, beg=0, end=205001
     k = 0
     for stock_code in stock_codes:
         print(k)
-        df, rows, columns = market.get_k_history(stock_code, beg, end)
-
+        if data_type == 'k':
+            df, rows, columns = market.get_k_history(stock_code, beg, end)
+        elif data_type == 'bill':
+            df, rows, columns = market.get_history_bill(stock_code)
+            
         if rows == []: # 股票代码有误
             continue
         dates = [int(row[0].replace('-','')) for row in rows] # 日期list，类型为int
@@ -47,19 +47,39 @@ def k_history(stock_codes=None, save_csv=False, save_dir=None, beg=0, end=205001
                 dict_date_as_key[date][1] = np.insert(feat, feat.shape[0], rows_except_date_to_numbers[i], 0)
 
         if save_csv is True:
-            df.to_csv(f'{save_dir}/k_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
-            print(f'股票代码：{stock_code} 的日间k线数据已保存到代码目录下的 {save_dir}/k_history_{stock_code}.csv 文件中')
+            if data_type == 'k':
+                df.to_csv(f'{save_dir}/k_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
+                print(f'股票代码：{stock_code} 的日间k线数据已保存到代码目录下的 {save_dir}/k_history_{stock_code}.csv 文件中')
+            elif data_type == 'bill':
+                df.to_csv(f'{save_dir}/bill_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
+                print(f'股票代码：{stock_code} 的日间大单数据已保存到代码目录下的 {save_dir}/bill_history_{stock_code}.csv 文件中')
         time.sleep(0.5)
         k+=1
-    
-    np.save('dict_code_as_key', dict_code_as_key)
-    np.save('dict_date_as_key', dict_date_as_key)
-    
+
+    if data_type == 'k':
+        np.save('k_dict_code_as_key', dict_code_as_key)
+        np.save('k_dict_date_as_key', dict_date_as_key)
+    elif data_type == 'bill':
+        np.save('bill_dict_code_as_key', dict_code_as_key)
+        np.save('bill_dict_date_as_key', dict_date_as_key)
+
     return dict_code_as_key, dict_date_as_key
+
+
+def k_history(stock_codes=None, save_csv=False, save_dir=None, beg=0, end=20500101):
+    '''
+    @description: 得到目标股票池的历史k线数据
+                包括 [开盘 收盘 最高 最低 成交量 成交额 振幅 涨跌幅 涨跌额 换手率]
+    @param {stock_codes: list 目标股票池，若用户未自定义，默认为市场所有股票}
+    @return {dict_code_as_key: 股票代码作为key，value为一个二维list，第一维为日期的list，第二维为二维numpy array，形状为len(日期数)*数据指标数
+            dict_date_as_key: 日期作为key，value为一个二维list，第一维为股票的list，第二维为二维numpy array，形状为len(股票数)*数据指标数}
+    '''
+
+    return history_helper('k', stock_codes, save_csv, save_dir, beg, end)
 
         
 
-def bill_history(stock_codes=None, save_dir='bill_history'):
+def bill_history(stock_codes=None, save_csv=False, save_dir='bill_history'):
     '''
     @description: 得到目标股票池的历史大单数据
                 包括 [主力净流入 小单净流入 中单净流入 大单净流入 超大单净流入 主力净流入占比 小单流入净占比 中单流入净占比 
@@ -67,16 +87,9 @@ def bill_history(stock_codes=None, save_dir='bill_history'):
     @param {stock_codes: 目标股票池，若用户未自定义，默认为市场所有股票}
     @return {None}
     '''
-    if stock_codes is None:
-        # 为了得到市场上上市股票的代码
-        stock_codes = utils.read_excel()
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    for stock_code in stock_codes:
-        df = market.get_history_bill(stock_code)
-        df.to_csv(f'{save_dir}/bill_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
-        print(f'股票代码：{stock_code} 的日间大单数据已保存到代码目录下的 {save_dir}/bill_history_{stock_code}.csv 文件中')
-        time.sleep(0.5)
+    
+    return history_helper('bill', stock_codes, save_csv, save_dir)
+
 
 def k_history_realtime(stock_codes=None, save_dir='k_history_realtime'):
     '''
@@ -94,7 +107,6 @@ def k_history_realtime(stock_codes=None, save_dir='k_history_realtime'):
     for _ in range(1000):
         for stock_code in stock_codes:
             df = market.get_k_realtime(stock_code)
-            print(df)
             # df.to_csv(f'{save_dir}/k_history_realtime_{stock_code}.csv', encoding='utf-8-sig', index=None)
             # print(f'股票代码：{stock_code} 的实时k线数据已保存到代码目录下的 {save_dir}/k_history_realtime_{stock_code}.csv 文件中')
             if len(df) >= 240:
@@ -117,10 +129,13 @@ def bill_history_realtime(stock_codes=None, save_dir='bill_history_realtime'):
         os.makedirs(save_dir)
     for _ in range(1000):
         for stock_code in stock_codes:
-            df = market.get_history_bill_realtime(stock_code)
+            df, rows, columns = market.get_history_bill_realtime(stock_code)
             df.to_csv(f'{save_dir}/bill_history_realtime_{stock_code}.csv', encoding='utf-8-sig', index=None)
             print(f'股票代码：{stock_code} 的实时大单数据已保存到代码目录下的 {save_dir}/bill_history_realtime_{stock_code}.csv 文件中')
             if len(df) >= 240:
                 print('已收盘')
                 break
             time.sleep(60)
+
+
+
