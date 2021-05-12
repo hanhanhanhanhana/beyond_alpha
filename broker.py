@@ -5,7 +5,8 @@
 import os
 import sys
 import time
-import order
+
+from order import Order
 
 class Broker:
     '''
