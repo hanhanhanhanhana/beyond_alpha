@@ -1,7 +1,7 @@
 '''
 Author: peihan
 Date: 2021-04-26 12:19:40
-LastEditTime: 2021-05-12 13:07:44
+LastEditTime: 2021-05-12 16:35:38
 LastEditors: Please set LastEditors
 Description: 接口类
 '''
@@ -30,10 +30,6 @@ def multi_threads_download(data_type='k_his', stock_code=None, beg=None, end=Non
     elif data_type == 'bill_realtime_2':
         return_list = market.get_history_bill_realtime_2(stock_code)
     global result
-    # if data_type == 'bill_realtime_2':
-    #         result.append([stock_code, return_list])
-    # else:
-    #     result.append([stock_code, df, rows, columns])
     # 使用finally 块来保证释放锁
     #加锁
     lock.acquire()
@@ -49,59 +45,65 @@ def multi_threads_download(data_type='k_his', stock_code=None, beg=None, end=Non
         lock.release()
 
 # history的数据采用多线程总是被封，服了，故history的还是用老办法吧，慢点就慢点
-# def history_helper(data_type='k_his', stock_codes=None, save_csv=False, save_dir=None, beg=0, end=20500101):
-#     '''
-#     @description: k_history与bill_history两个方法的helper函数
-#     @param {*}
-#     @return {*}
-#     '''
-#     if stock_codes is None:
-#         # 为了得到市场上上市股票的代码
-#         stock_codes = utils.read_excel()
-#     dict_code_as_key = {}
-#     dict_date_as_key = {}
-#     for code_index, stock_code in enumerate(stock_codes):
-#         t = threading.Thread(target=multi_threads_download, args=(data_type,stock_code, beg, end))
-#         t.start()
-#         print('code index:', code_index)
-#     t.join()
-#     for index in range(len(result)):
-#         stock_code = result[index][0]
-#         df = result[index][1]
-#         rows = result[index][2]
-#         columns = result[index][3]    
-#         if rows == []: # 股票代码有误
-#             continue
-#         dates = [int(row[0].replace('-','')) for row in rows] # 日期list，类型为int
-#         rows_except_date = [row[1:] for row in rows] # 列表中去除掉日期
-#         rows_except_date_to_numbers = np.array([np.fromstring(', '.join(row),   
-#                                         dtype=float, sep=', ') for row in rows_except_date]) # 形成二维array，形状为len(日期)*数据指标数
-#         dict_code_as_key[stock_code] = [dates, rows_except_date_to_numbers] # 二维list，第一维为日期的list，第二维为上面得到的二维array    
-#         # 得到dict_date_as_key的部分代码
-#         for i, date in enumerate(dates):
-#             if date not in dict_date_as_key.keys():
-#                 dict_date_as_key[date] = [[stock_code], np.array([rows_except_date_to_numbers[i]])]
-#             else:
-#                 dict_date_as_key[date][0].append(stock_code)
-#                 feat = dict_date_as_key[date][1]
-#                 dict_date_as_key[date][1] = np.insert(feat, feat.shape[0], rows_except_date_to_numbers[i], 0)
+def history_helper(data_type='k_his', stock_codes=None, save_csv=False, save_dir=None, beg=0, end=20500101):
+    '''
+    @description: k_history与bill_history两个方法的helper函数
+    @param {*}
+    @return {*}
+    '''
+    s_time = time.time()
+    if stock_codes is None:
+        # 为了得到市场上上市股票的代码
+        stock_codes = utils.read_excel()
+    dict_code_as_key = {}
+    dict_date_as_key = {}
+    threads = []
+    for code_index, stock_code in enumerate(stock_codes):
+        t = threading.Thread(target=multi_threads_download, args=(data_type,stock_code, beg, end))
+        t.start()
+        print('code index:{},code {}'.format(code_index, stock_code))
+        threads.append(t)
+        time.sleep(0.05)
+    # 等待所有线程完成
+    for t in threads:
+        t.join()
+    for index in range(len(result)):
+        stock_code = result[index][0]
+        df = result[index][1]
+        rows = result[index][2]
+        columns = result[index][3]    
+        if rows == []: # 股票代码有误
+            continue
+        dates = [int(row[0].replace('-','')) for row in rows] # 日期list，类型为int
+        rows_except_date = [row[1:] for row in rows] # 列表中去除掉日期
+        rows_except_date_to_numbers = np.array([np.fromstring(', '.join(row),   
+                                        dtype=float, sep=', ') for row in rows_except_date]) # 形成二维array，形状为len(日期)*数据指标数
+        dict_code_as_key[stock_code] = [dates, rows_except_date_to_numbers] # 二维list，第一维为日期的list，第二维为上面得到的二维array    
+        # 得到dict_date_as_key的部分代码
+        for i, date in enumerate(dates):
+            if date not in dict_date_as_key.keys():
+                dict_date_as_key[date] = [[stock_code], np.array([rows_except_date_to_numbers[i]])]
+            else:
+                dict_date_as_key[date][0].append(stock_code)
+                feat = dict_date_as_key[date][1]
+                dict_date_as_key[date][1] = np.insert(feat, feat.shape[0], rows_except_date_to_numbers[i], 0)
 
-#         if save_csv is True:
-#             if data_type == 'k_his':
-#                 df.to_csv(f'{save_dir}/k_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
-#                 print(f'股票代码：{stock_code} 的日间k线数据已保存到代码目录下的 {save_dir}/k_history_{stock_code}.csv 文件中')
-#             elif data_type == 'bill_his':
-#                 df.to_csv(f'{save_dir}/bill_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
-#                 print(f'股票代码：{stock_code} 的日间大单数据已保存到代码目录下的 {save_dir}/bill_history_{stock_code}.csv 文件中')
+        if save_csv is True:
+            if data_type == 'k_his':
+                df.to_csv(f'{save_dir}/k_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
+                print(f'股票代码：{stock_code} 的日间k线数据已保存到代码目录下的 {save_dir}/k_history_{stock_code}.csv 文件中')
+            elif data_type == 'bill_his':
+                df.to_csv(f'{save_dir}/bill_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
+                print(f'股票代码：{stock_code} 的日间大单数据已保存到代码目录下的 {save_dir}/bill_history_{stock_code}.csv 文件中')
     
-#     if data_type == 'k_his':
-#         np.save('k_dict_code_as_key', dict_code_as_key)
-#         np.save('k_dict_date_as_key', dict_date_as_key)
-#     elif data_type == 'bill_his':
-#         np.save('bill_dict_code_as_key', dict_code_as_key)
-#         np.save('bill_dict_date_as_key', dict_date_as_key)
-    
-#     return dict_code_as_key, dict_date_as_key
+    if data_type == 'k_his':
+        np.save('k_dict_code_as_key', dict_code_as_key)
+        np.save('k_dict_date_as_key', dict_date_as_key)
+    elif data_type == 'bill_his':
+        np.save('bill_dict_code_as_key', dict_code_as_key)
+        np.save('bill_dict_date_as_key', dict_date_as_key)
+    print('耗时：', time.time()-s_time)
+    return dict_code_as_key, dict_date_as_key
 
 
 def k_history(stock_codes=None, save_csv=False, save_dir='k_history', beg=0, end=20500101):
@@ -114,6 +116,8 @@ def k_history(stock_codes=None, save_csv=False, save_dir='k_history', beg=0, end
     '''
 
     return history_helper('k_his', stock_codes, save_csv, save_dir, beg, end)
+
+# def k_history_update()
 
 def bill_history(stock_codes=None, save_csv=False, save_dir='bill_history'):
     '''
@@ -137,11 +141,16 @@ def realtime_helper(data_type='k_realtime', stock_codes=None, save_csv=False, sa
         stock_codes = utils.read_excel()
     dict_code_as_key = {}
     dict_date_as_key = {}
+    threads = []
     for _ in range(1000):
         for code_index, stock_code in enumerate(stock_codes):
             t = threading.Thread(target=multi_threads_download, args=(data_type,stock_code))
             t.start()
             print('code index:', code_index)
+            threads.append(t)
+            time.sleep(0.02)
+        # 等待所有线程完成
+        for t in threads:
             t.join()
         for index in range(len(result)):
             stock_code = result[index][0]
@@ -244,60 +253,60 @@ def bill_history_realtime_2(stock_codes=None):
     # print(time.time()-a_time)
     return dict_code_as_key
 
-# 未加多线程的原始方法
-def history_helper(data_type='k_his', stock_codes=None, save_csv=False, save_dir=None, beg=0, end=20500101):
-    '''
-    @description: k_history与bill_history两个方法的helper函数
-    @param {*}
-    @return {*}
-    '''
-    if stock_codes is None:
-        # 为了得到市场上上市股票的代码
-        stock_codes = utils.read_excel()
-    dict_code_as_key = {}
-    dict_date_as_key = {}
-    k = 0
-    for stock_code in stock_codes:
-        print(k)
-        if data_type == 'k_his':
-            df, rows, columns = market.get_k_history(stock_code, beg, end)
-        elif data_type == 'bill_his':
-            df, rows, columns = market.get_history_bill(stock_code)
+# # 未加多线程的原始方法
+# def history_helper(data_type='k_his', stock_codes=None, save_csv=False, save_dir=None, beg=0, end=20500101):
+#     '''
+#     @description: k_history与bill_history两个方法的helper函数
+#     @param {*}
+#     @return {*}
+#     '''
+#     if stock_codes is None:
+#         # 为了得到市场上上市股票的代码
+#         stock_codes = utils.read_excel()
+#     dict_code_as_key = {}
+#     dict_date_as_key = {}
+#     k = 0
+#     for stock_code in stock_codes:
+#         print(k)
+#         if data_type == 'k_his':
+#             df, rows, columns = market.get_k_history(stock_code, beg, end)
+#         elif data_type == 'bill_his':
+#             df, rows, columns = market.get_history_bill(stock_code)
             
-        if rows == []: # 股票代码有误
-            continue
-        dates = [int(row[0].replace('-','')) for row in rows] # 日期list，类型为int
-        rows_except_date = [row[1:] for row in rows] # 列表中去除掉日期
-        rows_except_date_to_numbers = np.array([np.fromstring(', '.join(row),   
-                                        dtype=float, sep=', ') for row in rows_except_date]) # 形成二维array，形状为len(日期)*数据指标数
-        dict_code_as_key[stock_code] = [dates, rows_except_date_to_numbers] # 二维list，第一维为日期的list，第二维为上面得到的二维array    
-        # 得到dict_date_as_key的部分代码
-        for i, date in enumerate(dates):
-            if date not in dict_date_as_key.keys():
-                dict_date_as_key[date] = [[stock_code], np.array([rows_except_date_to_numbers[i]])]
-            else:
-                dict_date_as_key[date][0].append(stock_code)
-                feat = dict_date_as_key[date][1]
-                dict_date_as_key[date][1] = np.insert(feat, feat.shape[0], rows_except_date_to_numbers[i], 0)
+#         if rows == []: # 股票代码有误
+#             continue
+#         dates = [int(row[0].replace('-','')) for row in rows] # 日期list，类型为int
+#         rows_except_date = [row[1:] for row in rows] # 列表中去除掉日期
+#         rows_except_date_to_numbers = np.array([np.fromstring(', '.join(row),   
+#                                         dtype=float, sep=', ') for row in rows_except_date]) # 形成二维array，形状为len(日期)*数据指标数
+#         dict_code_as_key[stock_code] = [dates, rows_except_date_to_numbers] # 二维list，第一维为日期的list，第二维为上面得到的二维array    
+#         # 得到dict_date_as_key的部分代码
+#         for i, date in enumerate(dates):
+#             if date not in dict_date_as_key.keys():
+#                 dict_date_as_key[date] = [[stock_code], np.array([rows_except_date_to_numbers[i]])]
+#             else:
+#                 dict_date_as_key[date][0].append(stock_code)
+#                 feat = dict_date_as_key[date][1]
+#                 dict_date_as_key[date][1] = np.insert(feat, feat.shape[0], rows_except_date_to_numbers[i], 0)
 
-        if save_csv is True:
-            if data_type == 'k_his':
-                df.to_csv(f'{save_dir}/k_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
-                print(f'股票代码：{stock_code} 的日间k线数据已保存到代码目录下的 {save_dir}/k_history_{stock_code}.csv 文件中')
-            elif data_type == 'bill_his':
-                df.to_csv(f'{save_dir}/bill_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
-                print(f'股票代码：{stock_code} 的日间大单数据已保存到代码目录下的 {save_dir}/bill_history_{stock_code}.csv 文件中')
-        time.sleep(0.1)
-        k+=1
+#         if save_csv is True:
+#             if data_type == 'k_his':
+#                 df.to_csv(f'{save_dir}/k_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
+#                 print(f'股票代码：{stock_code} 的日间k线数据已保存到代码目录下的 {save_dir}/k_history_{stock_code}.csv 文件中')
+#             elif data_type == 'bill_his':
+#                 df.to_csv(f'{save_dir}/bill_history_{stock_code}.csv', encoding='utf-8-sig', index=None)
+#                 print(f'股票代码：{stock_code} 的日间大单数据已保存到代码目录下的 {save_dir}/bill_history_{stock_code}.csv 文件中')
+#         time.sleep(0.1)
+#         k+=1
     
-    if data_type == 'k_his':
-        np.save('k_dict_code_as_key', dict_code_as_key)
-        np.save('k_dict_date_as_key', dict_date_as_key)
-    elif data_type == 'bill_his':
-        np.save('bill_dict_code_as_key', dict_code_as_key)
-        np.save('bill_dict_date_as_key', dict_date_as_key)
+#     if data_type == 'k_his':
+#         np.save('k_dict_code_as_key', dict_code_as_key)
+#         np.save('k_dict_date_as_key', dict_date_as_key)
+#     elif data_type == 'bill_his':
+#         np.save('bill_dict_code_as_key', dict_code_as_key)
+#         np.save('bill_dict_date_as_key', dict_date_as_key)
     
-    return dict_code_as_key, dict_date_as_key
+#     return dict_code_as_key, dict_date_as_key
 
 
 # 未加多线程的原始方法，1000只股票耗时为200s左右

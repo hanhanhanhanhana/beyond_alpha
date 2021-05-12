@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-04-28 21:55:28
-LastEditTime: 2021-05-12 13:45:24
+LastEditTime: 2021-05-12 16:13:30
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \code\beyond_alpha\dataloader.py
@@ -11,7 +11,7 @@ import marketer as mk
 
 class MarketLoader:
     def __init__(self, beg=20210101, end=20500101, period='day',  
-                constituent_index=None, custom_stocks=None, save_csv=False, save_dir=None):
+                constituent_index=None, custom_stocks=None, save_csv=False, save_dir=None, update_file_name=None):
         '''
         @description: 根据要求输出对应股票池的股票信息
         @param {beg: 开始日期，20200101
@@ -20,7 +20,8 @@ class MarketLoader:
                 constituent_index: 各种股指对应的成分股
                 custom_stocks: 用户自定义股票池，['SH600000','SZ000002',....]
                 save_csv: 是否需要保存数据到本地
-                save_dir: 保存数据到本地的路径}
+                save_dir: 保存数据到本地的路径
+                update_file_name: 需要更新的文件名}
         @return {dict: key为股票代码 val为二维numpy D1：202001011030, D2: features}
         '''
         self.__beg = beg
@@ -30,6 +31,7 @@ class MarketLoader:
         self.__custom_stocks = custom_stocks
         self.__save_csv = save_csv
         self.__save_dir = save_dir
+
         
     # 处理save_csv与save_dir匹配问题
     def _handle_save_dir(self):
@@ -77,6 +79,10 @@ class MarketLoader:
             raise Exception('constituent_index与costom_stocks不能被同时设置，请选其一进行设置!')
 
         return dict_code_as_key, dict_date_as_key
+
+    # def update_k_history(self):
+    #     # 更新直到今天收盘前的k线数据
+        
 
     def load_bill_realtime(self):
         # 数据格式[主力净流入 小单净流入 中单净流入 大单净流入 超大单净流入]

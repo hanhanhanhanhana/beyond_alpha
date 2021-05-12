@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-05-12 12:56:14
-LastEditTime: 2021-05-12 13:40:50
+LastEditTime: 2021-05-12 13:51:06
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \code\beyond_alpha\jianting.py
@@ -13,6 +13,9 @@ import time
 last_len = 0
 for i in range(1000):
     opportunity_list = np.load('opportunity_list.npy',allow_pickle=True)
+    if opportunity_list == []:
+        print('还未检测到数据，稍等！')
+        continue
     now_len = len(opportunity_list)
     for j in range(len(opportunity_list)):
         code = opportunity_list[j][0]
