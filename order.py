@@ -51,7 +51,12 @@ class Order(object):
     @property
     def price(self):
         return self.__price
-    
+    @price.setter
+    def price(self, value):
+        if value <= 0 and value != -1:
+            raise ValueError("price should be -1 or positive number")
+        self.__price = value
+
     @property
     def done(self):
         return self.__done

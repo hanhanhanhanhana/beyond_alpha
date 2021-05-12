@@ -14,10 +14,11 @@ class Strategy:
         return self.__orders
 
     def add_order(self, *args):
-        pass
+        for order in args:
+            self.__orders.append(order)
 
-    def del_order(self, *args):
-        pass
+    def zero_orders(self):
+        self.__orders = []
 
     def strategy(self, stocks):
         pass
