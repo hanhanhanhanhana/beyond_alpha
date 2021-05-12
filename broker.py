@@ -56,8 +56,7 @@ class Broker:
 
     # 得到正在等待的订单
     def get_pending_orders(self):
-        for order in self.pending_orders:
-            print(order.err())
+        return self.pending_orders
 
     # 得到持仓情况
     def get_holding_stocks(self):
@@ -67,7 +66,7 @@ class Broker:
     def can_be_traded(self, stock_code: str) -> bool:
         if stock_code[:4] == 'SH60':
             return True
-        if stock_code[:5] in ('SH900', 'SH688', 'SZ000', 'SZ200', 'SZ002', 'SZ300'):
+        if stock_code[:5] in ('SH900', 'SH688', 'SZ000', 'SZ200', 'SZ002', 'SZ300', 'SZ003'):
             return True
         return False
 
@@ -102,14 +101,14 @@ class Broker:
         该单是否成功
         '''
         if self.can_be_traded(order.code) == False:                     # 判断股票能否交易
-            return False
+            return False, "无法交易"
         self.his_orders.append(order)                                   # 保存合法订单信息
         open_price, closing_price, high_price, low_price = stock[:4]    # 获取T日或T时价格信息
         trade_price, trade_shares = order.price, order.shares           # 从订单中获取交易信息
 
         if high_price == low_price and (high_price == round(closing_tm1*0.9, 2) or low_price == round(closing_tm1*1.1, 2)): # 一字涨停和一字跌停无法买入卖出
             self.pending_orders.append(order)                           # 对T时交易
-            return False
+            return False, "一字涨跌停"
         trade_money = trade_price * trade_shares                        # 交易金额
         
         if low_price <= trade_price <= high_price:                      # 判断价格是否可以成交
@@ -120,7 +119,7 @@ class Broker:
                 tm1_shares, t_shares, had_price, _ = self.stocks_assets[order.code] # 按照self.stocks_assets的上述约定
             except KeyError:
                 if order.type == 's':                                               # 处理首次卖出的错误逻辑
-                    return False
+                    return False, "未持有"
                 self.stocks_assets[order.code] = [0, 0, 0, 0]
                 tm1_shares, t_shares, had_price = 0, 0, 0
             # 判断并执行交易
@@ -132,13 +131,14 @@ class Broker:
                 self.remain_money += trade_money - fee
                 self.stocks_assets[order.code][0] = tm1_shares - trade_shares
             else:
-                return False
+                return False, "不满足买入卖出条件"
             order.deal_date = time.strftime("%Y%m%d%H%M%S", time.localtime())       # 成交日期时间：年月日时分秒
             order.done = True
             self.fee += fee
+            return True, "成功交易"
         else:
             self.pending_orders.append(order)                           # 对分时交易而言
-            return False
+            return False, "交易价格超出当日最高最低价"
 
     # 秒级操作逻辑
     def match_order_by_second(self, stock: list, order) -> bool:
@@ -174,12 +174,18 @@ class Broker:
         # 处理所有订单（分时交易未成交的单暂时如此处理，最好是可以回调）
         for order in orders + self.pending_orders:
             closing_tm1 = stocks['tm1'][tm1[order.code]][1]                              # 收盘价默认放到索引为1的位置
-            if order.price == -1:                                                           # 如果order中订单价为-1则以开盘价买入
-                order.price = stocks['t1'][t1[order.code]][0]
+            try:
+                if order.price == -1:                                                           # 如果order中订单价为-1则以开盘价买入
+                    order.price = stocks['t1'][t1[order.code]][0]
+            except KeyError:
+                print(f"{order.code}在T日没有数据")
+                continue
             if self.check_price(closing_tm1, order.price) == False:                         # 判断订单价格是否超出涨跌停，超出则打印
                 order.err("超过涨跌幅限制")
                 continue
-            self.match_order_by_day_or_minute(list(stocks['t1'][t1[order.code]]), closing_tm1, order)   # 根据T日或T时数据撮合交易
+            err, msg = self.match_order_by_day_or_minute(list(stocks['t1'][t1[order.code]]), closing_tm1, order)   # 根据T日或T时数据撮合交易
+            if err == False:
+                order.err(f"订单由于{msg}而失败")
             # 测试，正式需删除
             #order.err("测试")
         self.total_market = 0
@@ -206,5 +212,8 @@ class Broker:
         print(f"总手续费: {self.fee:.5f}")
         print(f"个股代码\t股价\t成本价\t持仓\t盈亏")
         for code, v in self.stocks_assets.items():
-            print(f"{code}\t{v[3]:.2f}\t{v[2]:.3f}\t{v[0]}\t{(v[3] - v[2])/v[2] * 100:.2f}%")
+            if (v[0] + v[1] > 0):
+                print(f"{code}\t{v[3]:.2f}\t{v[2]:.3f}\t{v[0]}\t{(v[3] - v[2])/v[2] * 100:.2f}%")
+            else:
+                print(f"{code}\t{v[3]:.2f}\t{v[2]:.3f}\t{v[0]}\t-%")
         #sys.stdout.flush()
