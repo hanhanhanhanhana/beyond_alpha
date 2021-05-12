@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-04-28 20:58:38
-LastEditTime: 2021-04-28 22:01:58
+LastEditTime: 2021-05-11 00:21:28
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \code\beyond_alpha\order.py
@@ -99,7 +99,7 @@ class Order(object):
         }
 
     # 打印当前订单
-    def err(self, msg):
+    def err(self, msg=''):
         print("订单失败原因:", msg)
         print("----------订单详情如下----------")
         print("id:    ", self.__id)
@@ -112,3 +112,4 @@ class Order(object):
         print("create_date:", self.__create_date)
         print("deal_date:  ", self.__deal_date)
         print("--------------------------------")
+

@@ -53,6 +53,11 @@ class Broker:
             'sSZ': lambda x: max(5, x*commission)+x*Broker.stamp_duty,                          # 卖出深市收取费用，券商佣金 + 印花税
         }
 
+    # 得到正在等待的订单
+    def get_pending_orders(self):
+        for order in self.pending_orders:
+            print(order.err())
+
     # 判断股票能否被交易
     def can_be_traded(self, stock_code: str) -> bool:
         if stock_code[:4] == 'SH60':
@@ -75,7 +80,7 @@ class Broker:
         ------
         价格是否允许
         '''
-        return True if closing_tm1*0.9 <= order_price <= closing_tm1*1.1 else False # 后面需要检查这个等于
+        return True if round(closing_tm1*0.9, 2) <= order_price <= round(closing_tm1*1.1, 2) else False # 后面需要检查这个等于
 
     # 分日分分操作逻辑（订单撮合）
     def match_order_by_day_or_minute(self, stock: list, closing_tm1, order) -> bool:
@@ -96,10 +101,12 @@ class Broker:
         self.his_orders.append(order)                                   # 保存合法订单信息
         open_price, closing_price, high_price, low_price = stock[:4]    # 获取T日或T时价格信息
         trade_price, trade_shares = order.price, order.shares           # 从订单中获取交易信息
-        if high_price == low_price and (high_price == closing_tm1*0.9 or low_price == closing_tm1*1.1): # 一字涨停和一字跌停无法买入卖出
+
+        if high_price == low_price and (high_price == round(closing_tm1*0.9, 2) or low_price == round(closing_tm1*1.1, 2)): # 一字涨停和一字跌停无法买入卖出
             self.pending_orders.append(order)                           # 对T时交易
             return False
         trade_money = trade_price * trade_shares                        # 交易金额
+        
         if low_price <= trade_price <= high_price:                      # 判断价格是否可以成交
             # 计算交易费率
             fee = self.stock_transaction_fee[order.type + order.code[:2]](trade_money)
@@ -149,6 +156,12 @@ class Broker:
         ------
         无返回值
         '''
+        # 将上一日的pending_orders清空
+        if self.pending_orders != []:
+            pending_date = self.pending_orders[0].create_date
+            running_date = orders[0].create_date
+            if pending_date != running_date:
+                self.pending_orders = []
         # 处理所有订单（分时交易未成交的单暂时如此处理，最好是可以回调）
         for order in orders + self.pending_orders:
             closing_tm1 = stocks['tm1'][order.code][1]                                   # 收盘价默认放到索引为1的位置

@@ -1,17 +1,45 @@
 '''
 Author: peihan
 Date: 2021-04-25 16:40:05
-LastEditTime: 2021-05-09 17:13:00
+LastEditTime: 2021-05-12 10:43:58
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 '''
 import marketer as mk
 import dataloader as dl
 import numpy as np
-
+import random
+import time
 
 # ml = dl.MarketLoader(beg='20210101', end='20210506', period='day', save_csv=True, save_dir='k_history')
 # dict_code_as_key, dict_date_as_key = ml.load_k_history()
+
+# load_bill_realtime_2测试代码，实时监控进行分析判断
+all_codes = np.load('all_codes.npy', allow_pickle=True)
+# 挑选了3000来只股票，后需要将股票池进一步缩小
+selected_codes = [code for code in all_codes if code.startswith('SH60') or code.startswith('SZ000') or code.startswith('SZ002')]
+ml = dl.MarketLoader(custom_stocks=selected_codes)
+
+for i in range(1000):
+    dict_code_as_key = ml.load_bill_realtime_2()
+    for code, value in dict_code_as_key.items():
+        if value == []:
+            continue
+        main_force_value = value[0]
+        main_force_perc = value[1]
+        super_large_order_value = value[2]
+        super_large_order_perc = value[3]
+        large_order_value = value[4]
+        large_order_perc = value[5]
+        mid_order_value = value[6]
+        mid_order_perc = value[7]
+        small_order_value = value[8]
+        small_order_perc = value[9]
+        # 策略部分代码，后续需完善
+        if main_force_perc > 20 and small_order_perc < -10:
+            print('注意机会：', code)
+    # 每次爬取后暂停一段时间
+    time.sleep(30)
 
 
 # mk.bill_history(save_csv=True, save_dir='bill_history')
@@ -26,7 +54,7 @@ import numpy as np
 # bill = np.load('bill_dict_code_as_key.npy', allow_pickle=True).item()
 # data_dict_code_as_key = {}
 # for code, value in k.items():
-#     rows = []
+#     rows = []z    
 #     date_len = 0
 #     bill_data_after_index = []
 #     k_data_after_index = []
@@ -97,7 +125,7 @@ import numpy as np
 
 
 
-
+# 简单主力净流入的分析部分代码
 # [开盘 收盘 最高 最低 成交量 成交额 振幅 涨跌幅 涨跌额 换手率 主力净流入 小单净流入 中单净流入 大单净流入 超大单净流入 
 # 主力净流入占比 小单流入净占比 中单流入净占比 大单流入净占比 超大单流入净占比 收盘价 涨跌幅]
 
@@ -174,30 +202,30 @@ import numpy as np
 # print('均收益：', Get_Average(profit))
 
 
-date_as_key_data = np.load('data_dict_date_as_key.npy', allow_pickle=True).item()
-threshold_zhulizhanbi = 40
 
-# TODO:如何判断新股
-for date, value in date_as_key_data.items():
-    print(date)
-    for i in range(len(value[0])):
-        print(value[0][i])
-        print(value[1][i])
-        kai_pan = value[1][i][0]
-        shou_pan = value[1][i][1]
-        zui_gao = value[1][i][2]
-        zui_di = value[1][i][3]
+# date_as_key_data = np.load('data_dict_date_as_key.npy', allow_pickle=True).item()
+# threshold_zhulizhanbi = 40
+
+# # TODO:如何判断新股
+# for date, value in date_as_key_data.items():
+#     print(date)
+#     for i in range(len(value[0])):
+#         print(value[0][i])
+#         print(value[1][i])
+#         kai_pan = value[1][i][0]
+#         shou_pan = value[1][i][1]
+#         zui_gao = value[1][i][2]
+#         zui_di = value[1][i][3]
         
-        zhu_li_liu_ru = value[1][i][10]
-        zhu_li_zhan_bi = value[1][i][15]
-        chao_da_dan_zhan_bi = value[1][i][19]
-        zhang_die_fu = value[1][i][-1]
+#         zhu_li_liu_ru = value[1][i][10]
+#         zhu_li_zhan_bi = value[1][i][15]
+#         chao_da_dan_zhan_bi = value[1][i][19]
+#         zhang_die_fu = value[1][i][-1]
 
-        print(zhu_li_zhan_bi)
-        print(zhang_die_fu)
-        exit()
-
-
+#         print(zhu_li_zhan_bi)
+#         print(zhang_die_fu)
+#         exit()
 
 
-    
+
+
