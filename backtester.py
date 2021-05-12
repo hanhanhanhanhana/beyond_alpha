@@ -33,23 +33,32 @@ class Backtester:
             self.tick = 1           # 每天的数据只有一条
         '''
 
-    def backtest(self):
+    def backtest(self, stocks=None):
         #dict_code_as_key, dict_date_as_key = self.mkter.load_k_history() # 三维np.array, dataloader提供转换成三维np.array和字典的方法比较好
         #all_time = len(dict_date_as_key)
         # 导入数据
-        d = np.load('dict_date_as_key.npy', allow_pickle=True).item()
+        if stocks == None:
+            d = np.load('dict_date_as_key.npy', allow_pickle=True).item()
+        else:
+            d = stocks
         sorted_date = sorted(list(d.keys()))
+        print(f"回测起止时间: {sorted_date[0]}-{sorted_date[-1]}")
         # 回测主循环, 根据决策时间，决策所需过往多少时间的数据这两个值来切片
         for t in range(self.time_sep, len(sorted_date), self.decision_sep):
+            print(f"当前决策日期: {sorted_date[t]}")
             # 切片: [决策时间-时间片长度: 决策时间)
             stocks = {sorted_date[i]: d[sorted_date[i]] for i in range(t - self.time_sep, t)}
             # 将tm1和t1的数据转换为二维字典
             tm1 = {d[sorted_date[t-1]][0][i]: i for i in range(len(d[sorted_date[t-1]][0]))}
             t1 = {d[sorted_date[t]][0][i]: i for i in range(len(d[sorted_date[t]][0]))}
             # 根据时间片长度内数据执行策略，获取T日订单
-            self.strategy(stocks)
+            self.strategy(stocks, self.broker)
             # 将股票转换为输入格式的字典
+            print(f"决策产生{sorted_date[t]}订单详情")
+            for order in self.strategy.orders:
+                order.err("决策产生订单详情")
+            print(f"{sorted_date[t]}交易详情")
             self.broker.run(tm1, t1, {'t1': d[sorted_date[t]][1], 'tm1': d[sorted_date[t-1]][1]}, self.strategy.orders, show=True)
             # 清空订单
             self.strategy.zero_orders()
-        self.broker.show()
+        #self.broker.show()
