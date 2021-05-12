@@ -1,7 +1,7 @@
 '''
 Author: peihan
 Date: 2021-04-26 12:19:40
-LastEditTime: 2021-05-12 10:14:11
+LastEditTime: 2021-05-12 13:07:44
 LastEditors: Please set LastEditors
 Description: 接口类
 '''
@@ -227,7 +227,7 @@ def bill_history_realtime_2(stock_codes=None):
         t.start()
         threads.append(t)
         print('code index:', code_index)
-        time.sleep(0.01)
+        time.sleep(0.02)
     # 等待所有线程完成
     for t in threads:
         t.join()

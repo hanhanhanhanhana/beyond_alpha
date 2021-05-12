@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-04-28 21:55:28
-LastEditTime: 2021-05-12 00:21:13
+LastEditTime: 2021-05-12 13:21:57
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \code\beyond_alpha\dataloader.py
@@ -42,6 +42,7 @@ class MarketLoader:
                 os.makedirs(self.__save_dir)
                 
     def load_k_history(self):    
+        # 数据格式 [开盘 收盘 最高 最低 成交量 成交额 振幅 涨跌幅 涨跌额 换手率]
         self._handle_save_dir()
         # 用户未定义，默认为全市场股票
         if self.__constituent_index is None and self.__custom_stocks is None:
@@ -59,6 +60,8 @@ class MarketLoader:
         return dict_code_as_key, dict_date_as_key
     
     def load_bill_history(self):
+        # 数据格式 [主力净流入 小单净流入 中单净流入 大单净流入 超大单净流入 主力净流入占比 小单流入净占比 中单流入净占比 
+        #       大单流入净占比 超大单流入净占比 收盘价 涨跌幅]
         self._handle_save_dir()
         # 用户未定义，默认为全市场股票
         if self.__constituent_index is None and self.__custom_stocks is None:
@@ -76,6 +79,7 @@ class MarketLoader:
         return dict_code_as_key, dict_date_as_key
 
     def load_bill_realtime(self):
+        # 数据格式[主力净流入 小单净流入 中单净流入 大单净流入 超大单净流入]
         self._handle_save_dir()
         # 用户未定义，默认为全市场股票
         if self.__constituent_index is None and self.__custom_stocks is None:
@@ -108,6 +112,7 @@ class MarketLoader:
         return dict_code_as_key
     
     def load_k_realtime(self):
+        # 数据格式 [未知 价格 未知 未知 成交量 成交额 均价]
         self._handle_save_dir()
         # 用户未定义，默认为全市场股票
         if self.__constituent_index is None and self.__custom_stocks is None:
