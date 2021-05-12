@@ -2,3 +2,14 @@
 dataTransform.py
 dict_date_as_key.npy
 test_backtest.py
+test_loader.py
+__pycache__/dataloader.cpython-37.pyc
+.gitignore
+marketer/__pycache__/__init__.cpython-37.pyc
+.gitignore
+marketer/__pycache__/market.cpython-37.pyc
+.gitignore
+marketer/__pycache__/utils.cpython-37.pyc
+*.npy
+*.pyc
+t
