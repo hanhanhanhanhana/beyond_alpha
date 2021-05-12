@@ -58,6 +58,10 @@ class Broker:
         for order in self.pending_orders:
             print(order.err())
 
+    # 得到持仓情况
+    def get_holding_stocks(self):
+        return {k: v for k, v in self.stocks_assets.items() if v[0] + v[1] > 0}
+
     # 判断股票能否被交易
     def can_be_traded(self, stock_code: str) -> bool:
         if stock_code[:4] == 'SH60':
