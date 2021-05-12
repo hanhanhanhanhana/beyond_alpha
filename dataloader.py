@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-04-28 21:55:28
-LastEditTime: 2021-05-12 13:21:57
+LastEditTime: 2021-05-12 13:45:24
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \code\beyond_alpha\dataloader.py
@@ -10,7 +10,7 @@ import os
 import marketer as mk
 
 class MarketLoader:
-    def __init__(self, beg=20210101, end=2050101, period='day',  
+    def __init__(self, beg=20210101, end=20500101, period='day',  
                 constituent_index=None, custom_stocks=None, save_csv=False, save_dir=None):
         '''
         @description: 根据要求输出对应股票池的股票信息
