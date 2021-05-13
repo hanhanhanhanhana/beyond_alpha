@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-04-28 20:58:38
-LastEditTime: 2021-05-11 00:21:28
+LastEditTime: 2021-05-12 17:48:58
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \code\beyond_alpha\order.py
@@ -15,7 +15,7 @@ class Order(object):
                 type: 'b' or 's'
                 code: 'SH600000'
                 shares: 买入或卖出的股数
-                price: 买入或卖出的价格,如果为-1则按市价买入
+                price: 买入或卖出的价格,如果为-1则按开盘价买入，-2收盘价，-3最高价，-4最低价
                 done: 成交与否
                 dsc: 额外的描述信息
                 create_date: 订单创建的时间，202001010930

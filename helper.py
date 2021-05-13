@@ -1,15 +1,20 @@
 '''
 Author: your name
 Date: 2021-05-12 11:30:01
-LastEditTime: 2021-05-12 11:31:59
+LastEditTime: 2021-05-13 22:50:22
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \code\beyond_alpha\helper.py
 '''
 import numpy as np
 
-# 合并code作为key的k与bill指标数据
-def combile_k_bill(k_data, bill_data):
+def combile_k_bill_code_as_key(k, bill):
+    '''
+    @description: 合并code作为key的k与bill指标数据
+    @param {k: k_dict_code_as_key, 
+            bill: bill_dict_code_as_key}
+    @return {data_dict_code_as_key}
+    '''
     data_dict_code_as_key = {}
     for code, value in k.items():
         rows = []
@@ -50,18 +55,16 @@ def combile_k_bill(k_data, bill_data):
         data_dict_code_as_key[code] = [date_after_index, np.array(rows)]
     np.save('data_dict_code_as_key.npy', data_dict_code_as_key)
 
-# # 合并k与bill的使用代码
-# k = np.load('k_dict_code_as_key.npy', allow_pickle=True).item()
-# bill = np.load('bill_dict_code_as_key.npy', allow_pickle=True).item()
-# combile_k_bill(k, bill)
 
-
-
-# 合并date作为key的k与bill指标数据
-def combile_k_bill_date_as_key(k_data, bill_data):
+def combile_k_bill_date_as_key(k, bill):
+    '''
+    @description: 合并date作为key的k与bill指标数据
+    @param {k: k_dict_date_as_key, 
+            bill: bill_dict_date_as_key}
+    @return {data_dict_date_as_key}
+    '''
     data_dict_date_as_key = {}
     for date, value in k.items():
-        print(date)
         rows = []
         codes_list = []
         code_len = 0
@@ -83,7 +86,28 @@ def combile_k_bill_date_as_key(k_data, bill_data):
         data_dict_date_as_key[date] = [codes_list, rows]
     np.save('data_dict_date_as_key.npy', data_dict_date_as_key)
 
-# # 合并date作为key的k与bill的使用代码
-# k = np.load('k_dict_date_as_key.npy', allow_pickle=True).item()
-# bill = np.load('bill_dict_date_as_key.npy', allow_pickle=True).item()
-# combile_k_bill_date_as_key(k, bill)
+def calculate_nMA(input_data, n):
+    '''
+    @description: 计算n日均线
+    @param {input_data: data_dict_code_as_key.npy的地址
+            n: 需计算的n日均线}
+    @return {MA_dict: 保持data_dict_code_as_key的格式，key为code，value为二维list
+                    第一维为日期的list，第二维为n日均线的list}
+    '''
+    his_data = np.load(input_data,allow_pickle=True).item() 
+    MA = n
+    MA_dict = {}
+
+    for code, value in his_data.items():
+        MA_list = []
+        close_price_list = value[1][:,1]
+        for i in range(len(value[0])):
+            if i+1 < MA:
+                MA_list.append(-1)
+            else:
+                MA_value = round(sum(close_price_list[i+1-MA:i+1])/MA, 2)
+                MA_list.append(MA_value)
+        if len(value[0]) != len(MA_list):
+            raise Exception('有问题!!!')
+        MA_dict[code] = [value[0], MA_list]
+    np.save('MA{}.npy'.format(MA), MA_dict)

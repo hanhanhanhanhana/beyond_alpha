@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-05-12 12:56:14
-LastEditTime: 2021-05-12 13:51:06
+LastEditTime: 2021-05-13 13:34:21
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \code\beyond_alpha\jianting.py
@@ -9,29 +9,36 @@ FilePath: \code\beyond_alpha\jianting.py
 from time import sleep
 import numpy as np
 import time
+import os
 
-last_len = 0
+print_first = True
+global_codes_pool = []
+
 for i in range(1000):
-    opportunity_list = np.load('opportunity_list.npy',allow_pickle=True)
-    if opportunity_list == []:
-        print('还未检测到数据，稍等！')
-        continue
-    now_len = len(opportunity_list)
-    for j in range(len(opportunity_list)):
-        code = opportunity_list[j][0]
-        main_force_value = opportunity_list[j][1]
-        main_force_perc = opportunity_list[j][2]
-        small_order_value = opportunity_list[j][3]
-        small_order_perc = opportunity_list[j][4]
-        # print('code:', code)
-        # print('main_force_value:{}, main_force_perc:{}, small_order_value:{}, small_order_perc:{}'.format(main_force_value,
-        #                                 main_force_perc,small_order_value,small_order_perc))
-        # print('-------------------------------')
-    if now_len > last_len:
-        print('!!!!!!!!!!!!!!!!! 注意注意，有新的股票满足条件 !!!!!!!!!!!!!!!!!')
-        print(opportunity_list[last_len:])
-    last_len = now_len
-    print('上一次检测有{}只股票满足条件！！！'.format(len(opportunity_list)))
-    print('等待......')
-    time.sleep(5)
+    if os.path.exists('opportunity_list.npy'):
+        opportunity_list = np.load('opportunity_list.npy',allow_pickle=True)
+        if len(opportunity_list) == 0:
+            print('还未检测到数据，稍等！')
+            continue
+        if len(opportunity_list) != 0 and len(global_codes_pool) == 0:
+            global_codes_pool = opportunity_list[-1]
+        if global_codes_pool != opportunity_list[-1]:
+            new_added = [i for i in opportunity_list[-1] if i not in global_codes_pool]
+            new_reduced = [i for i in global_codes_pool if i not in opportunity_list[-1]]
+            if new_added != []:
+                print('!'*100)
+                print(' '*30 +'注意注意，有新满足条件的股票进入的股票池'+' '*50)
+                print(new_added)
+                print('!'*100)
+                
+            if new_reduced != []:
+                print('*'*100)
+                print(' '*30 + '注意注意，有股票退出满足条件的股票池'+' '*50)
+                print(new_reduced)
+                print('*'*100)
+            
+            global_codes_pool = opportunity_list[-1]
+
+        print(' '*25 +'上一次检测有{}只股票满足条件，等待下一次监测'.format(len(opportunity_list[-1]))+' '*50)
+    time.sleep(10)
         
